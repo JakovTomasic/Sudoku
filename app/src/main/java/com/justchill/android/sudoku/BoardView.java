@@ -106,6 +106,12 @@ public class BoardView extends View {
         drawSelectedRowAndCol(canvas, board.getSelectedRow(), board.getSelectedColumn(), selectedBackgroundPaint);
         drawSelectedNumbers(canvas, board.getSelectedRow(), board.getSelectedColumn(), selectedNumberBackgroundPaint);
 
+        // TODO: make a function
+        if(board.getSelectedCell() != null)
+            canvas.drawRect(getCellX(board.getSelectedColumn()), getCellY(board.getSelectedRow()),
+                getCellX(board.getSelectedColumn()) + getCellSize(), getCellY(board.getSelectedRow()) + getCellSize(),
+                selectedNumberBackgroundPaint);
+
         drawLines(canvas);
         drawNumbers(canvas);
 
@@ -183,20 +189,23 @@ public class BoardView extends View {
                 float yCoord = getCellY(r) + getCellSize()/2 - (startNumberPaint.ascent() + startNumberPaint.descent())/2;
                 float xCoord = getCellX(c) + getCellSize()/2;
 
-                switch (currentCell.getState()) {
-                    case Cell.STATE_START_NUMBER:
-                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, startNumberPaint);
-                        break;
-                    case Cell.STATE_SOLVED:
-                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, solvedNumberPaint);
-                        break;
-                    case Cell.STATE_NOT_SOLVED:
-                        drawNotes(canvas, r, c);
-                        break;
-                    case Cell.STATE_WRONG:
-                        canvas.drawText(String.valueOf(currentCell.getGuessNumber()), xCoord, yCoord, wrongNumberPaint);
-                        break;
-                }
+                // TODO: delete
+                canvas.drawText(String.valueOf(board.getBoxNumber(r, c)), xCoord, yCoord, startNumberPaint);
+
+//                switch (currentCell.getState()) {
+//                    case Cell.STATE_START_NUMBER:
+//                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, startNumberPaint);
+//                        break;
+//                    case Cell.STATE_SOLVED:
+//                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, solvedNumberPaint);
+//                        break;
+//                    case Cell.STATE_NOT_SOLVED:
+//                        drawNotes(canvas, r, c);
+//                        break;
+//                    case Cell.STATE_WRONG:
+//                        canvas.drawText(String.valueOf(currentCell.getGuessNumber()), xCoord, yCoord, wrongNumberPaint);
+//                        break;
+//                }
 
 
             }
@@ -260,7 +269,10 @@ public class BoardView extends View {
     void drawSelectedNumbers(Canvas canvas, int row, int col, Paint paint) {
         if(row == Board.UNDEFINED || col == Board.UNDEFINED) return;
 
-        if(!board.getCell(row, col).isSolutionVisible()) return;
+        if(!board.getCell(row, col).isSolutionVisible()) {
+
+            return;
+        }
 
         for(int r = 0; r < board.getNumberOfRows(); r++) {
             for(int c = 0; c < board.getNumberOfColumns(); c++) {

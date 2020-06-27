@@ -190,22 +190,23 @@ public class BoardView extends View {
                 float xCoord = getCellX(c) + getCellSize()/2;
 
                 // TODO: delete
-                canvas.drawText(String.valueOf(board.getBoxNumber(r, c)), xCoord, yCoord, startNumberPaint);
+//                canvas.drawText(String.valueOf(board.getBoxNumber(r, c)), xCoord, yCoord, startNumberPaint);
+//                canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, startNumberPaint);
 
-//                switch (currentCell.getState()) {
-//                    case Cell.STATE_START_NUMBER:
-//                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, startNumberPaint);
-//                        break;
-//                    case Cell.STATE_SOLVED:
-//                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, solvedNumberPaint);
-//                        break;
-//                    case Cell.STATE_NOT_SOLVED:
-//                        drawNotes(canvas, r, c);
-//                        break;
-//                    case Cell.STATE_WRONG:
-//                        canvas.drawText(String.valueOf(currentCell.getGuessNumber()), xCoord, yCoord, wrongNumberPaint);
-//                        break;
-//                }
+                switch (currentCell.getState()) {
+                    case Cell.STATE_START_NUMBER:
+                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, startNumberPaint);
+                        break;
+                    case Cell.STATE_SOLVED:
+                        canvas.drawText(String.valueOf(currentCell.getSolution()), xCoord, yCoord, solvedNumberPaint);
+                        break;
+                    case Cell.STATE_NOT_SOLVED:
+                        drawNotes(canvas, r, c);
+                        break;
+                    case Cell.STATE_WRONG:
+                        canvas.drawText(String.valueOf(currentCell.getGuessNumber()), xCoord, yCoord, wrongNumberPaint);
+                        break;
+                }
 
 
             }

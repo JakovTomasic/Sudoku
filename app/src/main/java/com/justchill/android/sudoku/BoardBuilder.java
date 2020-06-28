@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Vector;
 
 class BoardBuilder {
 
@@ -52,7 +51,6 @@ class BoardBuilder {
 
     }
 
-    // TODO: make random (not organized) version of this
     int[][] generateBoxMap() {
         int[][] boxMap = new int[number][number];
 
@@ -78,7 +76,6 @@ class BoardBuilder {
         int[][] boxMap = new int[number][number];
         Graph<Integer> graph = new Graph<>();
 
-        // TODO: make circle
         for(int r = 0; r < number; r++) {
             for(int c = 0; c < number-1; c++) {
                 graph.addEdge(r*number + c, r*number + c+1, false);
@@ -124,7 +121,7 @@ class BoardBuilder {
 //        }
 
 
-        // TODO: validate at the and and repeat if not good
+        // TODO: validate at the end and repeat if not good
 
         for(int i = 0; i < number*3;) {
             i += changeHamiltonianPath(graph) ? 1 : 0;
@@ -154,9 +151,7 @@ class BoardBuilder {
 
 
         Integer now = 0;
-        int count = 0;
 
-        // TODO: fix ArrayIndexOutOfBoundsException: length=9; index=9
         for(int i = 0; i < number; i++) {
             for(int j = 0; j < number; j++) {
 //                Log.e("#######", "######################### 5: " + now);
@@ -310,15 +305,16 @@ class BoardBuilder {
                 break;
         }
 
-        int[] ahaDap = new int[]{node, node2, node3, node4};
-        int[] ahaDap2 = new int[]{node5, node6, node7, node8};
+        int[] firstChangeNodes = new int[]{node, node2, node3, node4};
+        int[] secondChangeNodes = new int[]{node5, node6, node7, node8};
 
-        for(int i : ahaDap) {
-            for(int j : ahaDap2) {
+        for(int i : firstChangeNodes) {
+            for(int j : secondChangeNodes) {
                 if(i == j) return false;
             }
         }
 
+        // TODO: use this
         List<Pair<Integer, Integer>> added = new ArrayList<>();
         List<Pair<Integer, Integer>> removed = new ArrayList<>();
 
@@ -400,6 +396,7 @@ class BoardBuilder {
             if(curr != null) visited.put(curr, true);
             else {
 //                Log.e("connectEdges", "##################### START:");
+                // TODO: optimize (4 - one on each side instead of number*number times
                 for(int i = 0; i < number*number; i++) {
 //                    Log.e("connectEdges", "##################### " + i + ", " + prev + ": " + visited.get(i) + ", " + graph.hasEdge(i, prev, false));
                     if(!visited.get(i) && graph.hasEdge(i, prev, false)) {
@@ -423,16 +420,18 @@ class BoardBuilder {
 
     // TODO: this code is too ugly
     // TODO: optimize for big numbers
-    boolean dfsGenerateSolution(Random random, int row, int col) {
+    private boolean generateSolution(Random random, int row, int col) {
         if(row < 0 || row >= board.getNumberOfRows() || col < 0 || col >= board.getNumberOfColumns()) return false;
 
 
+        // This is just a backup
         Board currentBoard = new Board(board);
 
 
         while(true) {
 
             board = new Board(currentBoard);
+            Solver solver = board.getSolver();
 
 
             if(board.getCell(row, col).getNotes().isEmpty()) return false;
@@ -447,10 +446,10 @@ class BoardBuilder {
                 if (notesCounter++ >= solutionNumber) break;
             }
 
-            Solver.solveCell(board, note, row, col);
+            solver.solveCell(note, row, col);
             currentBoard.getCell(row, col).removeNote(note);
 
-            while(Solver.solveNextStep(board, number, number, number, number));
+            solver.tryToSolveAll();
 
             int notSolvedCounter = 0;
 
@@ -474,7 +473,7 @@ class BoardBuilder {
                     if(board.getCell(r, c).getSolution() != Cell.UNDEFINED_SOLUTION) continue;
                     if(cellCounter++ < nextCellNumber) continue;
 
-                    if(dfsGenerateSolution(random, r, c)) {
+                    if(generateSolution(random, r, c)) {
                         board.getCell(row, col).setState(Cell.STATE_START_NUMBER);
                         return true;
                     }
@@ -553,7 +552,7 @@ class BoardBuilder {
 
         Random random = new Random();
 
-        dfsGenerateSolution(random, random.nextInt(board.getNumberOfRows()), random.nextInt(board.getNumberOfColumns()));
+        generateSolution(random, random.nextInt(board.getNumberOfRows()), random.nextInt(board.getNumberOfColumns()));
 
         for(int r = 0; r < board.getNumberOfRows(); r++) {
             for(int c = 0; c < board.getNumberOfColumns(); c++) {

@@ -26,6 +26,7 @@ public class BoardView extends View {
 
     private Board board;
 
+    // TODO: other data type?
     private HashSet<Pair<Integer, Integer>> drawCellVisited;
 
     public BoardView(Context context, @Nullable AttributeSet attrs) {

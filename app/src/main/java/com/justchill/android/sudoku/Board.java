@@ -20,6 +20,7 @@ class Board implements Cloneable {
 
     private int selectedRow = UNDEFINED, selectedCol = UNDEFINED;
 
+    private Solver solver;
 
     Board(int number, int rows, int cols, int boxRows, int boxCols, int[][] boxMap) {
         this.number = number;
@@ -36,6 +37,7 @@ class Board implements Cloneable {
             }
         }
 
+        this.solver = new Solver(this);
     }
 
     Board(Board cloneFromBoard) {
@@ -56,6 +58,8 @@ class Board implements Cloneable {
                 this.cells[i][j] = new Cell(cloneFromBoard.getCell(i, j));
             }
         }
+
+        this.solver = new Solver(this);
     }
 
     int getNumber() {
@@ -109,11 +113,19 @@ class Board implements Cloneable {
         return boxCols;
     }
 
+    int getNumberOfBoxes() {
+        return number;
+    }
+
+    Solver getSolver() {
+        return this.solver;
+    }
+
     void onResultGuess(int guess) {
 
         if(guess == getSelectedCell().getSolution()) {
             getSelectedCell().setState(Cell.STATE_SOLVED);
-            Solver.removeNotes(this, guess, getSelectedRow(), getSelectedColumn(), getSelectedBoxNumber());
+            this.solver.removeNotes(guess, getSelectedRow(), getSelectedColumn(), getSelectedBoxNumber());
         } else {
             getSelectedCell().setState(Cell.STATE_WRONG);
             getSelectedCell().setGuessNumber(guess);

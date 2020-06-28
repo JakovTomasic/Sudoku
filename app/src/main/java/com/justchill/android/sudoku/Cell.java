@@ -16,6 +16,7 @@ class Cell {
 
     private int state;
 
+    // TODO: maybe change data type?
     private HashSet<Integer> notes;
 
     private int guessNumber = UNDEFINED_SOLUTION;
@@ -65,6 +66,14 @@ class Cell {
         return this.notes.remove(note);
     }
 
+    boolean removeNotes(HashSet<Integer> notes) {
+        boolean removed = false;
+        for(int note : notes) {
+            removed = getNotes().remove(note) || removed;
+        }
+        return removed;
+    }
+
     void clearNotes() {
         this.notes.clear();
     }
@@ -93,4 +102,5 @@ class Cell {
     boolean isSolutionVisible() {
         return getState() == Cell.STATE_START_NUMBER || getState() == Cell.STATE_SOLVED;
     }
+
 }

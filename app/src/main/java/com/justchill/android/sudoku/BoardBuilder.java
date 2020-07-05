@@ -1,5 +1,6 @@
 package com.justchill.android.sudoku;
 
+import android.util.Log;
 import android.util.Pair;
 
 import java.util.ArrayList;
@@ -33,8 +34,8 @@ class BoardBuilder {
 
         this.number = number;
         calculateBoxSizes();
-//        this.boxMap = generateBoxMap();
-        this.boxMap = generateRandomBoxMap();
+        this.boxMap = generateBoxMap();
+//        this.boxMap = generateRandomBoxMap();
     }
 
     void calculateBoxSizes() {
@@ -417,22 +418,35 @@ class BoardBuilder {
         return count == number*number;
     }
 
+    private long time1 = 0;
+    private long time2 = 0;
+    private long time3 = 0;
+    private long time4 = 0;
+    private long time5 = 0;
+
+    private int failed = 0;
 
     // TODO: this code is too ugly
     // TODO: optimize for big numbers
+    // TODO: first add 15-17 random numbers (for number==9)
+    // TODO: just put them in order (at least boxRows * number times; in case of 9: 27)
     private boolean generateSolution(Random random, int row, int col) {
         if(row < 0 || row >= board.getNumberOfRows() || col < 0 || col >= board.getNumberOfColumns()) return false;
 
-
+        long time11 = System.currentTimeMillis();
         // This is just a backup
         Board currentBoard = new Board(board);
 
+        time1 += System.currentTimeMillis()-time11;
 
+        failed--;
         while(true) {
-
+            failed++;
+            long time41 = System.currentTimeMillis();
             board = new Board(currentBoard);
             Solver solver = board.getSolver();
 
+            time4 += System.currentTimeMillis()-time41;
 
             if(board.getCell(row, col).getNotes().isEmpty()) return false;
 
@@ -445,11 +459,18 @@ class BoardBuilder {
                 note = noteIterator;
                 if (notesCounter++ >= solutionNumber) break;
             }
+            long time21 = System.currentTimeMillis();
 
             solver.solveCell(note, row, col);
-            currentBoard.getCell(row, col).removeNote(note);
+            currentBoard.removeCellNote(note, row, col);
 
+            time2 += System.currentTimeMillis()-time21;
+            long time51 = System.currentTimeMillis();
             solver.tryToSolveAll();
+            time5 += System.currentTimeMillis()-time51;
+
+
+            long time31 = System.currentTimeMillis();
 
             int notSolvedCounter = 0;
 
@@ -468,14 +489,27 @@ class BoardBuilder {
             int nextCellNumber = random.nextInt(notSolvedCounter);
             int cellCounter = 0;
 
+            time3 += System.currentTimeMillis()-time31;
             for(int r = 0; r < board.getNumberOfRows(); r++) {
                 for(int c = 0; c < board.getNumberOfColumns(); c++) {
                     if(board.getCell(r, c).getSolution() != Cell.UNDEFINED_SOLUTION) continue;
                     if(cellCounter++ < nextCellNumber) continue;
 
+
                     if(generateSolution(random, r, c)) {
                         board.getCell(row, col).setState(Cell.STATE_START_NUMBER);
                         return true;
+                    } else {
+//                        Log.e("##############", "########################### " + note + ": ");
+//                        for(int i = 0; i < board.getNumberOfRows(); i++) {
+//                            for(int j = 0; j < board.getNumberOfColumns(); j++) {
+//                                StringBuilder sb = new StringBuilder();
+//                                if(board.getCell(i, j).getSolution() != Cell.UNDEFINED_SOLUTION)
+//                                    sb.append("\"").append(board.getCell(i, j).getSolution()).append("\"");
+//                                else for(int k : board.getCell(i, j).getNotes()) sb.append(k).append(" ");
+//                                Log.e("##############", "########################### " + i + ", " + j + ": " + sb.toString());
+//                            }
+//                        }
                     }
 
                     break;
@@ -545,7 +579,7 @@ class BoardBuilder {
         for(int r = 0; r < board.getNumberOfRows(); r++) {
             for(int c = 0; c < board.getNumberOfColumns(); c++) {
                 for(int k = 1; k <= number; k++) {
-                    board.getCell(r, c).addNote(k);
+                    board.addCellNote(k, r, c);
                 }
             }
         }
@@ -560,6 +594,22 @@ class BoardBuilder {
                 board.getCell(r, c).setState(Cell.STATE_NOT_SOLVED);
             }
         }
+
+        Log.e("#################", "########################## 1: " + time1);
+        Log.e("#################", "########################## 2: " + time2);
+        Log.e("#################", "########################## 3: " + time3);
+        Log.e("#################", "########################## 4: " + time4);
+        Log.e("#################", "########################## 5: " + time5);
+        Log.e("#################", "########################## errors: " + failed);
+        Log.e("#################", "########################## puta1: " + Solver.puta1);
+        Log.e("#################", "########################## puta2: " + Solver.puta2);
+        Log.e("#################", "########################## timer1: " + Solver.timer1);
+        Log.e("#################", "########################## timer2: " + Solver.timer2);
+        Log.e("#################", "########################## timer3: " + Solver.timer3);
+        Log.e("#################", "########################## timer4: " + Solver.timer4);
+        Log.e("#################", "########################## timer5: " + Solver.timer5);
+        Log.e("#################", "########################## timer6: " + Solver.timer6);
+        Log.e("#################", "########################## timer7: " + Solver.timer7);
 
         return board;
     }

@@ -1,5 +1,6 @@
 package com.justchill.android.sudoku;
 
+import android.util.Log;
 import android.util.Pair;
 
 import java.util.ArrayList;
@@ -16,77 +17,159 @@ class Solver {
     private Board board;
     private int number, boxes, rows, cols;
 
+    /**
+     * Number of each number notes in each row/col/box
+     */
+    private ArrayList<Pair<Integer, Integer>>[][] numbersInTheRow;
+    private ArrayList<Pair<Integer, Integer>>[][] numbersInTheCol;
+    private ArrayList<Pair<Integer, Integer>>[][] numbersInTheBox;
+
+    public static long timer1 = 0;
+    public static long timer2 = 0;
+    public static long timer3 = 0;
+    public static long timer4 = 0;
+    public static long timer5 = 0;
+    public static long timer6 = 0;
+    public static long timer7 = 0;
+    public static long puta1 = 0;
+    public static long puta2 = 0;
+
     Solver(Board board) {
         this.board = board;
         number = board.getNumber();
         boxes = board.getNumberOfBoxes();
         rows = board.getNumberOfRows();
         cols = board.getNumberOfColumns();
+        numbersInTheRow = new ArrayList[rows][number+1];
+        numbersInTheCol = new ArrayList[cols][number+1];
+        numbersInTheBox = new ArrayList[boxes][number+1];
     }
 
+    Solver(Board board, boolean clone) {
+        this.board = board;
+        number = board.getNumber();
+        boxes = board.getNumberOfBoxes();
+        rows = board.getNumberOfRows();
+        cols = board.getNumberOfColumns();
+        numbersInTheRow = new ArrayList[rows][number+1];
+        numbersInTheCol = new ArrayList[cols][number+1];
+        numbersInTheBox = new ArrayList[boxes][number+1];
+        for(int r = 0; r < rows; r++) {
+            for(int c = 0; c < cols; c++) {
+                for(int note : board.getCell(r, c).getNotes()) {
+                    addCellNote(note, r, c);
+                }
+            }
+        }
+    }
+
+    /*************** cell note functions *****************/
+
+    void addCellNote(int note, int row, int col) {
+        if(numbersInTheRow[row][note] == null) numbersInTheRow[row][note] = new ArrayList<>();
+        if(numbersInTheCol[col][note] == null) numbersInTheCol[col][note] = new ArrayList<>();
+        if(numbersInTheBox[board.getBoxNumber(row, col)][note] == null) numbersInTheBox[board.getBoxNumber(row, col)][note] = new ArrayList<>();
+        numbersInTheRow[row][note].add(new Pair<>(row, col));
+        numbersInTheCol[col][note].add(new Pair<>(row, col));
+        numbersInTheBox[board.getBoxNumber(row, col)][note].add(new Pair<>(row, col));
+    }
+
+    void removeCellNote(int note, int row, int col) {
+        if(numbersInTheRow[row][note] != null) numbersInTheRow[row][note].remove(new Pair<>(row, col));
+        if(numbersInTheCol[col][note] != null) numbersInTheCol[col][note].remove(new Pair<>(row, col));
+        if(numbersInTheBox[board.getBoxNumber(row, col)][note] != null) numbersInTheBox[board.getBoxNumber(row, col)][note].remove(new Pair<>(row, col));
+    }
+
+    void removeCellNotes(HashSet<Integer> notes, int row, int col) {
+        for(int note : notes) {
+            if(numbersInTheRow[row][note] != null) numbersInTheRow[row][note].remove(new Pair<>(row, col));
+            if(numbersInTheCol[col][note] != null) numbersInTheCol[col][note].remove(new Pair<>(row, col));
+            if(numbersInTheBox[board.getBoxNumber(row, col)][note] != null)
+                    numbersInTheBox[board.getBoxNumber(row, col)][note].remove(new Pair<>(row, col));
+        }
+    }
+
+    void clearCellNotes(int row, int col) {
+        for(int note = 1; note <= number; note++) {
+            if(numbersInTheRow[row][note] != null) numbersInTheRow[row][note].remove(new Pair<>(row, col));
+            if(numbersInTheCol[col][note] != null) numbersInTheCol[col][note].remove(new Pair<>(row, col));
+            if(numbersInTheBox[board.getBoxNumber(row, col)][note] != null) numbersInTheBox[board.getBoxNumber(row, col)][note].remove(new Pair<>(row, col));
+        }
+    }
+
+    /*****************************************************/
+
+
     boolean removeNotes(int guess, int row, int col, int boxNumber) {
-        // TODO: other data type? (HashSet)
-        boolean removed = removeNotesFromBox(guess, row, col, boxNumber, new HashSet<Pair<Integer, Integer>>());
+        puta1++;
+        timer1 -= System.currentTimeMillis();
+        boolean removed = removeNotesFromBox(guess, boxNumber);
+        timer1 += System.currentTimeMillis();
+        timer2 -= System.currentTimeMillis();
         removed = removeNotesFromRow(guess, row, Board.UNDEFINED) || removed;
+        timer2 += System.currentTimeMillis();
+        timer3 -= System.currentTimeMillis();
         removed = removeNotesFromCol(guess, col, Board.UNDEFINED) || removed;
+        timer3 += System.currentTimeMillis();
         return removed;
     }
 
-    void removeNotesSmart() {
+    boolean removeNotesSmart() {
         boolean removed;
-        do {
+//        do {
+//            puta2++;
             removed = removeNotesRowInteraction();
             removed = removeNotesBlockInteraction() || removed;
             removed = removeNotesNakedSubset() || removed;
             removed = removeNotesHiddenSubset() || removed;
             removed = removeNotesSwordfishAndXWing() || removed;
             removed = removeNotesForcingChain() || removed;
-        } while (removed);
+//        } while (removed);
+        return removed;
     }
 
-    private boolean removeNotesFromBox(int note, int row, int col, int boxNumber, HashSet<Pair<Integer, Integer>> cellsVisited) {
-        if(boxNumber == Cell.UNDEFINED_BOX_NUMBER) return false;
-        if(row < 0 || row >= rows || col < 0 || col >= cols) return false;
-        if(board.getBoxNumber(row, col) != boxNumber) return false;
+    private boolean removeNotesFromBox(int note, int boxNumber) {
+        if(boxNumber == Board.UNDEFINED) return false;
+        if(numbersInTheBox[boxNumber][note] == null) return false;
 
-        Pair<Integer, Integer> current = new Pair<>(row, col);
-
-        if(cellsVisited.contains(current)) return false;
-        cellsVisited.add(current);
-
-        boolean removed = board.getCell(row, col).removeNote(note);
-
-        removed = removeNotesFromBox(note, row+1, col, boxNumber, cellsVisited) || removed;
-        removed = removeNotesFromBox(note, row-1, col, boxNumber, cellsVisited) || removed;
-        removed = removeNotesFromBox(note, row, col+1, boxNumber, cellsVisited) || removed;
-        removed = removeNotesFromBox(note, row, col-1, boxNumber, cellsVisited) || removed;
-        return removed;
+        ArrayList<Pair<Integer, Integer>> toRemove = new ArrayList<>();
+        for(Pair<Integer, Integer> coord : numbersInTheBox[boxNumber][note]) {
+            toRemove.add(new Pair<>(coord.first, coord.second));
+        }
+        for(Pair<Integer, Integer> coord : toRemove) {
+            board.removeCellNote(note, coord.first, coord.second);
+        }
+        return toRemove.size() > 0;
     }
 
     private boolean removeNotesFromRow(int noteNumber, int row, int exceptFromBox) {
         if(row == Board.UNDEFINED) return false;
-        boolean noteRemoved = false;
+        if(numbersInTheRow[row][noteNumber] == null) return false;
 
-        for(int i = 0; i < board.getNumberOfColumns(); i++) {
-            if(board.getBoxNumber(row, i) == exceptFromBox) continue;
-
-            noteRemoved = board.getCell(row, i).removeNote(noteNumber) || noteRemoved;
+        ArrayList<Pair<Integer, Integer>> toRemove = new ArrayList<>();
+        for(Pair<Integer, Integer> coord : numbersInTheRow[row][noteNumber]) {
+            if(board.getBoxNumber(coord.first, coord.second) == exceptFromBox) continue;
+            toRemove.add(new Pair<>(coord.first, coord.second));
         }
-
-        return noteRemoved;
+        for(Pair<Integer, Integer> coord : toRemove) {
+            board.removeCellNote(noteNumber, coord.first, coord.second);
+        }
+        return toRemove.size() > 0;
     }
 
     private boolean removeNotesFromCol(int noteNumber, int col, int exceptFromBox) {
         if(col == Board.UNDEFINED) return false;
-        boolean noteRemoved = false;
+        if(numbersInTheCol[col][noteNumber] == null) return false;
 
-        for(int i = 0; i < board.getNumberOfRows(); i++) {
-            if(board.getBoxNumber(i, col) == exceptFromBox) continue;
-
-            noteRemoved = board.getCell(i, col).removeNote(noteNumber) || noteRemoved;
+        ArrayList<Pair<Integer, Integer>> toRemove = new ArrayList<>();
+        for(Pair<Integer, Integer> coord : numbersInTheCol[col][noteNumber]) {
+            if(board.getBoxNumber(coord.first, coord.second) == exceptFromBox) continue;
+            toRemove.add(new Pair<>(coord.first, coord.second));
         }
-
-        return noteRemoved;
+        for(Pair<Integer, Integer> coord : toRemove) {
+            board.removeCellNote(noteNumber, coord.first, coord.second);
+        }
+        return toRemove.size() > 0;
     }
 
     /**
@@ -95,64 +178,105 @@ class Solver {
      * @return
      */
     private boolean removeNotesRowInteraction() {
-        int[][] numberOfNumberInTheBox = new int[number+1][boxes];
+        // TODO: optimize (? is box in row/col bool[number][number])
         boolean removed = false;
-
-        // TODO: optimize this
-
-        for(int r = 0; r < rows; r++) {
-            for(int c = 0; c < cols; c++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumberInTheBox[note][board.getBoxNumber(r, c)]++;
+        for(int num = 1; num <= number; num++) {
+            for(int bx = 0; bx < boxes; bx++) {
+                if(numbersInTheBox[bx][num] == null) continue;
+                if(numbersInTheBox[bx][num].size() < 2) continue;
+                int prevRow = Board.UNDEFINED, prevCol = Board.UNDEFINED;
+                boolean rowChanged = false, colChanged = false;
+                boolean remove = true;
+                for(Pair<Integer, Integer> coord : numbersInTheBox[bx][num]) {
+                    if(prevRow != Board.UNDEFINED && prevRow != coord.first) rowChanged = true;
+                    if(prevCol != Board.UNDEFINED && prevCol != coord.first) colChanged = true;
+                    if(rowChanged && colChanged) {
+                        remove = false;
+                        break;
+                    }
+                    prevRow = coord.first;
+                    prevCol = coord.second;
                 }
+                if(!remove) continue;
+                if(!rowChanged) removed = removeNotesFromRow(num, prevRow, bx) || removed;
+                if(!colChanged) removed = removeNotesFromCol(num, prevCol, bx) || removed;
             }
         }
-
-        // Horizontal
-        for(int r = 0; r < rows; r++) {
-            int[][] numberOfNumberInTheLine = new int[number+1][boxes];
-            for(int c = 0; c < cols; c++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumberInTheLine[note][board.getBoxNumber(r, c)]++;
-                }
-            }
-
-            for(int i = 1; i <= number; i++) {
-                for(int j = 0; j < boxes; j++) {
-                    if(numberOfNumberInTheBox[i][j] <= 0 || numberOfNumberInTheLine[i][j] <= 0) continue;
-                    if(numberOfNumberInTheBox[i][j] != numberOfNumberInTheLine[i][j]) continue;
-
-                    removed = removeNotesFromRow(i, r, j) || removed;
-                }
-            }
-        }
-
-        // Vertical
-        for(int c = 0; c < cols; c++) {
-            int[][] numberOfNumberInTheLine = new int[number+1][boxes];
-            for(int r = 0; r < rows; r++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumberInTheLine[note][board.getBoxNumber(r, c)]++;
-                }
-            }
-
-            for(int i = 1; i <= number; i++) {
-                for(int j = 0; j < boxes; j++) {
-                    if(numberOfNumberInTheBox[i][j] <= 0 || numberOfNumberInTheLine[i][j] <= 0) continue;
-                    if(numberOfNumberInTheBox[i][j] != numberOfNumberInTheLine[i][j]) continue;
-
-                    removed = removeNotesFromCol(i, c, j) || removed;
-                }
-            }
-        }
-
         return removed;
-
     }
 
-    // TODO: finish
+    // TODO: make code smaller/better
+    // TODO: optimize
+    // TODO: comment
+    // TODO: test it
     private boolean removeNotesBlockInteraction() {
-        return false;
+        boolean removed = false;
+//        for(int num = 1; num <= number; num++) {
+//            for(int bx = 0; bx < boxes; bx++) {
+//                if(numbersInTheBox[bx][num] == null || numbersInTheBox[bx][num].isEmpty()) continue;
+//                ArrayList<Integer> rowsAffected = new ArrayList<>();
+//                ArrayList<Integer> colsAffected = new ArrayList<>();
+//                ArrayList<Integer> boxesAffected = new ArrayList<>();
+//                ArrayList<Integer> boxesToVisit = new ArrayList<>();
+//
+//                // Horizontal
+//                boxesToVisit.add(bx);
+//                int currentBox;
+//                while(!boxesToVisit.isEmpty()) {
+//                    currentBox = boxesToVisit.get(0);
+//                    boxesToVisit.remove(0);
+//                    if(numbersInTheBox[currentBox][num] == null) continue;
+//                    if(boxesAffected.contains(currentBox)) continue;
+//                    boxesAffected.add(currentBox);
+//                    for(Pair<Integer, Integer> coord : numbersInTheBox[currentBox][num]) {
+//                        if(rowsAffected.contains(coord.first)) continue;
+//                        rowsAffected.add(coord.first);
+//                        for(Pair<Integer, Integer> cell : numbersInTheRow[coord.first][num]) {
+//                            if(boxesAffected.contains(board.getBoxNumber(cell.first, cell.second))) continue;
+//                            boxesToVisit.add(board.getBoxNumber(cell.first, cell.second));
+//                        }
+//                    }
+//                }
+//                if(rowsAffected.size() == boxesAffected.size()) {
+//                    for(int r : rowsAffected) {
+//                        for(int c = 0; c < cols; c++) {
+//                            if(boxesAffected.contains(board.getBoxNumber(r, c))) continue;
+//                            board.removeCellNote(num, r, c);
+//                            removed = true;
+//                        }
+//                    }
+//                }
+//
+//                // Vertical
+//                boxesAffected.clear();
+//                boxesToVisit.add(bx);
+//                while(!boxesToVisit.isEmpty()) {
+//                    currentBox = boxesToVisit.get(0);
+//                    boxesToVisit.remove(0);
+//                    if(numbersInTheBox[currentBox][num] == null) continue;
+//                    if(boxesAffected.contains(currentBox)) continue;
+//                    boxesAffected.add(currentBox);
+//                    for(Pair<Integer, Integer> coord : numbersInTheBox[currentBox][num]) {
+//                        if(colsAffected.contains(coord.second)) continue;
+//                        colsAffected.add(coord.second);
+//                        for(Pair<Integer, Integer> cell : numbersInTheCol[coord.second][num]) {
+//                            if(boxesAffected.contains(board.getBoxNumber(cell.first, cell.second))) continue;
+//                            boxesToVisit.add(board.getBoxNumber(cell.first, cell.second));
+//                        }
+//                    }
+//                }
+//                if(colsAffected.size() == boxesAffected.size()) {
+//                    for(int c : colsAffected) {
+//                        for(int r = 0; r < rows; r++) {
+//                            if(boxesAffected.contains(board.getBoxNumber(r, c))) continue;
+//                            board.removeCellNote(num, r, c);
+//                            removed = true;
+//                        }
+//                    }
+//                }
+//            }
+//        }
+        return removed;
     }
 
     private boolean removeNotesNakedSubset() {
@@ -255,7 +379,38 @@ class Solver {
     }
 
     // TODO: finish
+    // TODO: optimize
     private boolean removeNotesSwordfishAndXWing() {
+        // Horizontal (remove vertical)
+        // Vertical (remove horizontal)
+//        ArrayList<Integer>[][] yes = new ArrayList[number][cols];
+//        for(int i = 0; i < number; i++) {
+//            for(int j = 0; j < cols; j++) {
+//                yes[i][j] = new ArrayList<>();
+//            }
+//        }
+//        for(int c = 0; c < rows; c++) {
+//            for(int r = 0; r < cols; r++) {
+//                for(int note : board.getCell(r, c).getNotes()) {
+//                    yes[note][c].add(r);
+//                }
+//            }
+//        }
+
+//        for(int numb = 1; numb <= number; numb++) {
+//            // Horizontal (remove vertical)
+//            // Vertical (remove horizontal)
+//            for(int c = 0; c < rows; c++) {
+//                for(int r = 0; r < cols; r++) {
+//
+//                    for(int note : board.getCell(r, c).getNotes()) {
+//                        yes[note][c].add(r);
+//                    }
+//                }
+//            }
+//        }
+
+
         return false;
     }
 
@@ -264,10 +419,24 @@ class Solver {
         return false;
     }
 
-
+    // TODO: return this back to normal (booleans)
     private boolean solveNextStep() {
-        removeNotesSmart();
-        boolean solved = solveCellsWithOneNote();
+//        timer7 -= System.currentTimeMillis();
+//        removeNotesSmart();
+//        timer7 += System.currentTimeMillis();
+//        timer4 -= System.currentTimeMillis();
+//        boolean solved = solveCellsWithOneNote();
+//        timer4 += System.currentTimeMillis();
+//        timer5 -= System.currentTimeMillis();
+//        boolean solved2 = solveBoxes();
+//        timer5 += System.currentTimeMillis();
+//        timer6 -= System.currentTimeMillis();
+//        boolean solved3 = solveRowsAndCols();
+//        timer6 += System.currentTimeMillis();
+//
+//        return solved || solved2 || solved3;
+        boolean solved = removeNotesSmart();
+        solved = solveCellsWithOneNote() || solved;
         solved = solveBoxes() || solved;
         solved = solveRowsAndCols() || solved;
         return solved;
@@ -277,6 +446,10 @@ class Solver {
         while(solveNextStep());
     }
 
+    /**
+     * Technique: sole candidate
+     * @return
+     */
     private boolean solveCellsWithOneNote() {
         boolean cellSolved = false;
         for(int r = 0; r < rows; r++) {
@@ -292,82 +465,47 @@ class Solver {
         return cellSolved;
     }
 
+    /**
+     * Technique: Unique Candidate in boxes
+     * @return
+     */
     private boolean solveBoxes() {
-        int[][] numberOfNumberInTheBox = new int[number+1][boxes];
         boolean cellSolved = false;
-
-        // TODO: optimize this
-
-        for(int r = 0; r < rows; r++) {
-            for(int c = 0; c < cols; c++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumberInTheBox[note][board.getBoxNumber(r, c)]++;
-                }
+        for(int bx = 0; bx < boxes; bx++) {
+            for(int num = 1; num <= number; num++) {
+                if(numbersInTheBox[bx][num] == null) continue;
+                if(numbersInTheBox[bx][num].size() != 1) continue;
+                solveCell(num, numbersInTheBox[bx][num].get(0).first, numbersInTheBox[bx][num].get(0).second);
+                cellSolved = true;
             }
         }
-
-        for(int r = 0; r < rows; r++) {
-            for(int c = 0; c < cols; c++) {
-
-                for (int note : board.getCell(r, c).getNotes()) {
-                    if(numberOfNumberInTheBox[note][board.getBoxNumber(r, c)] == 1) {
-                        solveCell(note, r, c);
-                        cellSolved = true;
-                        break;
-                    }
-                }
-
-            }
-        }
-
         return cellSolved;
     }
 
+    /**
+     * Technique: Unique Candidate in rows and cols
+     * @return
+     */
     private boolean solveRowsAndCols() {
-        int[] numberOfNumber;
         boolean cellSolved = false;
-
-        // TODO: optimize this
-
         // Horizontal
         for(int r = 0; r < rows; r++) {
-            numberOfNumber = new int[number+1];
-            for(int c = 0; c < cols; c++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumber[note]++;
-                }
-            }
-            for(int c = 0; c < cols; c++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    if(numberOfNumber[note] == 1) {
-                        solveCell(note, r, c);
-                        cellSolved = true;
-                        break;
-                    }
-                }
+            for(int num = 1; num <= number; num++) {
+                if(numbersInTheRow[r][num] == null) continue;
+                if(numbersInTheRow[r][num].size() != 1) continue;
+                solveCell(num, numbersInTheRow[r][num].get(0).first, numbersInTheRow[r][num].get(0).second);
+                cellSolved = true;
             }
         }
-
         // Vertical
         for(int c = 0; c < cols; c++) {
-            numberOfNumber = new int[number+1];
-            for(int r = 0; r < rows; r++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    numberOfNumber[note]++;
-                }
-            }
-            for(int r = 0; r < rows; r++) {
-                for (int note : board.getCell(r, c).getNotes()) {
-                    if(numberOfNumber[note] == 1) {
-                        solveCell(note, r, c);
-                        cellSolved = true;
-                        break;
-                    }
-                }
+            for(int num = 1; num <= number; num++) {
+                if(numbersInTheCol[c][num] == null) continue;
+                if(numbersInTheCol[c][num].size() != 1) continue;
+                solveCell(num, numbersInTheCol[c][num].get(0).first, numbersInTheCol[c][num].get(0).second);
+                cellSolved = true;
             }
         }
-
-
         return cellSolved;
     }
 

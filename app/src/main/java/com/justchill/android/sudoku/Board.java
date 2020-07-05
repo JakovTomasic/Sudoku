@@ -59,7 +59,7 @@ class Board implements Cloneable {
             }
         }
 
-        this.solver = new Solver(this);
+        this.solver = new Solver(this, true);
     }
 
     int getNumber() {
@@ -83,6 +83,35 @@ class Board implements Cloneable {
         if(col < 0 || col >= cols || row < 0 || row >= rows) return null;
         return cells[row][col];
     }
+
+    /*************** cell note functions *****************/
+
+    void addCellNote(int note, int row, int col) {
+        if(getCell(row, col).getNotes().contains(note)) return;
+        getCell(row, col).getNotes().add(note);
+        solver.addCellNote(note, row, col);
+    }
+
+    boolean removeCellNote(int note, int row, int col) {
+        solver.removeCellNote(note, row, col);
+        return getCell(row, col).getNotes().remove(note);
+    }
+
+    boolean removeCellNotes(HashSet<Integer> notes, int row, int col) {
+        boolean removed = false;
+        for(int note : notes) {
+            removed = getCell(row, col).getNotes().remove(note) || removed;
+        }
+        if(removed) solver.removeCellNotes(notes, row, col);
+        return removed;
+    }
+
+    void clearCellNotes(int row, int col) {
+        getCell(row, col).getNotes().clear();
+        solver.clearCellNotes(row, col);
+    }
+
+    /*****************************************************/
 
     void setSelected(int row, int col) {
         this.selectedRow = row;
